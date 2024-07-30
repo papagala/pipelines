@@ -32,6 +32,15 @@ def insert_system_labels_into_payload(payload):
   return json.dumps(job_spec)
 
 
+def is_json(test_string: str) -> bool:
+  try:
+    json.loads(test_string)
+  except ValueError as _:
+    return False
+  return True
+
+
+# rename this
 def cast_accelerator_count_to_int(payload):
   """Casts accelerator_count from string to an int."""
 
@@ -39,17 +48,50 @@ def cast_accelerator_count_to_int(payload):
   # TODO(b/353577594): accelerator_count placeholder is not resolved to int.
   # Need to typecast to int to avoid type mismatch error. Can remove when fix
   # placeholder resolution.
-  if (
-      'accelerator_count'
-      in job_spec['job_spec']['worker_pool_specs'][0]['machine_spec']
-  ):
-    job_spec['job_spec']['worker_pool_specs'][0]['machine_spec'][
-        'accelerator_count'
-    ] = int(
+  worker_pool_spec = job_spec['job_spec']['worker_pool_specs'][0]
+  # print(
+  #     'before accelerator_count:'
+  #     f' {repr(worker_pool_spec["machine_spec"]["accelerator_count"])}'
+  # )
+  if 'accelerator_count' in worker_pool_spec['machine_spec']:
+    worker_pool_spec['machine_spec']['accelerator_count'] = int(
         job_spec['job_spec']['worker_pool_specs'][0]['machine_spec'][
             'accelerator_count'
         ]
     )
+  # print(
+  #     'after accelerator_count:'
+  #     f' {repr(worker_pool_spec["machine_spec"]["accelerator_count"])}'
+  # )
+  # if worker_pool_spec.get('boot_disk', {}).get('boot_disk_size_gb', ''):
+  #   worker_pool_spec['boot_disk']['boot_disk_size_gb'] = int(
+  #       job_spec['job_spec']['worker_pool_specs'][0]['boot_disk'][
+  #           'boot_disk_size_gb'
+  #       ]
+  #   )
+
+  # this doesn't work on int fields for some reason
+  # if is_json(
+  #     worker_pool_spec.get('machine_spec', {}).get('accelerator_count', '')
+  # ):
+  #   worker_pool_spec['machine_spec']['accelerator_count'] = json.loads(
+  #       worker_pool_spec['machine_spec']['accelerator_count']
+  #   )
+  # if is_json(
+  #     worker_pool_spec.get('boot_disk', {}).get('boot_disk_size_gb', '')
+  # ):
+  #   worker_pool_spec['boot_disk']['boot_disk_size_gb'] = json.loads(
+  #       worker_pool_spec['boot_disk']['boot_disk_size_gb']
+  #   )
+  # if is_json(worker_pool_spec.get('container_spec', {}).get('env', '')):
+  #   worker_pool_spec['container_spec']['env'] = json.loads(
+  #       worker_pool_spec['container_spec']['env']
+  #   )
+  # print(f"before nfs_mounts: {repr(worker_pool_spec['nfs_mounts'])}")
+  # if is_json(worker_pool_spec.get('nfs_mounts', '')):
+  #   worker_pool_spec['nfs_mounts'] =
+  #      json.loads(worker_pool_spec['nfs_mounts'])
+  # print(f"after nfs_mounts: {repr(worker_pool_spec['nfs_mounts'])}")
   return json.dumps(job_spec)
 
 

@@ -8,6 +8,7 @@
 * Add check that component in preview.custom_job.utils.create_custom_training_job_from_component doesn't have any parameters that share names with any custom job fields
 * Add dynamic machine spec support for `preview.custom_job.utils.create_custom_training_job_from_component`.
 * Add preflight validations for LLM text generation pipeline.
+* Add dynamic support for boot_disk_type, boot_disk_size, nfs_mounts, env in `preview.custom_job.utils.create_custom_training_job_from_component`.
 
 ## Release 2.15.0
 * Add Gemini batch prediction support to `v1.model_evaluation.autosxs_pipeline`.

@@ -48,6 +48,9 @@ def _replace_executor_placeholder(
   ]
 
 
+# there is trouble parsing nfs_mounts
+# https://pantheon.corp.google.com/vertex-ai/pipelines/locations/us-central1/runs/pipeline-20240731020844?project=managed-pipeline-test&e=13802955&mods=-autopush_coliseum&inv=1&invt=AbYIhQ
+# i think probably same error with env
 # keep identical to CustomTrainingJobOp
 def create_custom_training_job_from_component(
     component_spec: Callable,
@@ -163,15 +166,32 @@ def create_custom_training_job_from_component(
               user_component_container.get('args', [])
           ),
           'env': env or [],
+          # 'env': [],
+          # 'env': "{{$.inputs.parameters['env']}}",
+          # 'env': "{{$.json_escape[1].inputs.parameters['env']}}",
+          # 'env': "{{$.inputs.parameters['env'].json_escape[1]}}",
+          # 'env': "{{$.inputs.parameters['env'].json_escape[0]}}",
+          # 'env': "{{$.inputs.parameters['env'].json_escape[2]}}",
       },
+      'disk_spec': {
+          'boot_disk_type': "{{$.inputs.parameters['boot_disk_type']}}",
+          'boot_disk_size_gb': "{{$.inputs.parameters['boot_disk_size_gb']}}",
+      },
+      # 'nfs_mounts': "{{$.inputs.parameters['nfs_mounts']}}",
   }
-  if boot_disk_type:
-    worker_pool_spec['disk_spec'] = {
-        'boot_disk_type': boot_disk_type,
-        'boot_disk_size_gb': boot_disk_size_gb,
-    }
-  if nfs_mounts:
-    worker_pool_spec['nfs_mounts'] = nfs_mounts
+  # list fields (env, nfs_mounts) cause issues with parsing payload.
+  # even with local unit tests
+  # probably remote_runner json.loads is doing something unexpected.
+
+  # worker_pool_spec['container_spec']['env'] = json.loads(
+
+  # if boot_disk_type:
+  #   worker_pool_spec['disk_spec'] = {
+  #       'boot_disk_type': boot_disk_type,
+  #       'boot_disk_size_gb': boot_disk_size_gb,
+  #   }
+  # if nfs_mounts:
+  #   worker_pool_spec['nfs_mounts'] = nfs_mounts
 
   worker_pool_specs = [worker_pool_spec]
 
@@ -212,9 +232,6 @@ def create_custom_training_job_from_component(
     ] = default_value
 
   # add machine parameters into the customjob component
-  if accelerator_type == 'ACCELERATOR_TYPE_UNSPECIFIED':
-    accelerator_count = 0
-
   cj_component_spec['inputDefinitions']['parameters']['machine_type'] = {
       'parameterType': 'STRING',
       'defaultValue': machine_type,
@@ -227,7 +244,31 @@ def create_custom_training_job_from_component(
   }
   cj_component_spec['inputDefinitions']['parameters']['accelerator_count'] = {
       'parameterType': 'NUMBER_INTEGER',
-      'defaultValue': accelerator_count,
+      'defaultValue': (
+          accelerator_count
+          if accelerator_type != 'ACCELERATOR_TYPE_UNSPECIFIED'
+          else 0
+      ),
+      'isOptional': True,
+  }
+  cj_component_spec['inputDefinitions']['parameters']['boot_disk_type'] = {
+      'parameterType': 'STRING',
+      'defaultValue': boot_disk_type,
+      'isOptional': True,
+  }
+  cj_component_spec['inputDefinitions']['parameters']['boot_disk_size_gb'] = {
+      'parameterType': 'NUMBER_INTEGER',
+      'defaultValue': boot_disk_size_gb,
+      'isOptional': True,
+  }
+  cj_component_spec['inputDefinitions']['parameters']['nfs_mounts'] = {
+      'parameterType': 'LIST',
+      'defaultValue': nfs_mounts or [],
+      'isOptional': True,
+  }
+  cj_component_spec['inputDefinitions']['parameters']['env'] = {
+      'parameterType': 'LIST',
+      'defaultValue': env or [],
       'isOptional': True,
   }
 
